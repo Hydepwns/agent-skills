@@ -45,6 +45,7 @@ knowledge that requires ZK expertise.
 
 - `droo-stack` -- for Noir language syntax (types, modules, generics)
 - `solidity-audit` -- for Solidity verifier contracts that consume Noir proofs
+- `zk-x-ray` -- for pre-audit reports on ZK + EVM hybrid protocols (Noir + Solidity)
 - `ethskills` -- for Ethereum ecosystem tooling and standards
 
 ## Reading guide

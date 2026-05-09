@@ -53,6 +53,7 @@ This skill activates when writing, reviewing, or auditing Solidity contracts.
 
 - `ethskills` -- for EIP/ERC standard lookup, tool selection, and RPC/explorer reference
 - `noir` -- for ZK circuits that integrate with Solidity via verifier contracts
+- `zk-x-ray` -- for pre-audit reports on ZK + EVM hybrid protocols (Noir + Solidity)
 - `design-ux` -- for smart contract frontend design and transaction UX
 
 ## Reading guide

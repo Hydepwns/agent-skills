@@ -43,6 +43,7 @@ resources.
 - `sentinel` -- automated on-chain contract monitoring with alert rules
 - `solidity-audit` -- for EIP/ERC implementation guidance and security review
 - `noir` -- for ZK circuit patterns and Aztec contract integration
+- `zk-x-ray` -- for pre-EIP audit briefings on ZK + EVM hybrid protocols
 - `design-ux` -- for dApp frontend design patterns
 
 ## Reading guide
