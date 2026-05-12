@@ -25,6 +25,7 @@ Each skill lives in `skills/<name>/` with a `SKILL.md` entry point.
 | `raxol`                                 | Elixir TUI/agent framework (TEA agents, MCP, headless sessions)                          |
 | `noir`                                  | ZK circuit design, Aztec contracts, constraint optimization                              |
 | `solidity-audit`                        | Solidity dev standards, vulnerability taxonomy, Foundry-first audit                      |
+| `zk-x-ray`                              | Pre-audit briefing for ZK + EVM hybrids (Noir + Solidity), public-input parity check     |
 | `ethskills`                             | Ethereum tooling, framework selection, EIP/ERC standards                                 |
 | `design-ux`                             | UI/UX design patterns, design tokens, accessibility, TUI aesthetics                      |
 | `nix`                                   | Nix language, flakes, NixOS, Home Manager, packaging                                     |
