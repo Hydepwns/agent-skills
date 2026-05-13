@@ -1,6 +1,6 @@
 # digest
 
-Multi-platform activity digest agent. Topic in -> synthesized brief out, weighted by engagement signals across 11 sources: Hacker News, GitHub, Reddit, YouTube, ethresear.ch, Snapshot, Polymarket, package registries (hex.pm/crates.io/npm), CoinGecko, Blockscout, and Shodan.
+Multi-platform activity digest agent. Topic in -> synthesized brief out, weighted by engagement signals across 18 sources spanning tech (Hacker News, GitHub, Reddit, YouTube, package registries), web3 (ethresear.ch, Snapshot, Polymarket, CoinGecko, Blockscout, Shodan), research (arXiv, OpenAlex, Semantic Scholar, PubMed), and government/legal (Federal Register, CourtListener, ClinicalTrials.gov).
 
 Inspired by [last30days-skill](https://github.com/mvanhorn/last30days-skill).
 
@@ -22,8 +22,11 @@ digest generate "rust async runtime"
 # Specific window and platforms
 digest generate "zero knowledge proofs" --days 7 --platforms hn,github,reddit
 
-# All platforms
-digest generate "elixir otp" --platforms hn,github,reddit,youtube,ethresearch,snapshot,polymarket,packages,coingecko,blockscout,shodan
+# See all platforms
+digest list-platforms
+
+# Specific bucket of platforms
+digest generate "elixir otp" --platforms hn,github,reddit,youtube,packages
 
 # Write markdown to a file
 digest generate "noir language" --output digest.md
@@ -47,7 +50,7 @@ digest alerts
 CLI (typer)
   -> Pipeline
        -> Query expansion (static rules, platform-specific terms)
-       -> Adapters (11 sources) fetch in parallel
+       -> Adapters (18 sources) fetch in parallel
        -> Post-fetch hook (injection pattern scanning)
        -> Dedupe by URL + title similarity
        -> Rank by log-weighted engagement * recency * credibility
@@ -55,13 +58,13 @@ CLI (typer)
   -> Output (terminal via rich, or markdown file)
 ```
 
-Each adapter is a small module under `src/digest/adapters/` implementing the `Adapter` protocol (`name: str` + `fetch(query, days, limit) -> list[Item]`).
+Each adapter is a small module under `src/digest/adapters/` implementing the `Adapter` protocol (`name: str` + `fetch(query, days, limit) -> list[Item]`). Shared helpers (`fetch_json`, `parse_iso_utc`, `coerce_int`, etc.) live in `agents/shared/src/shared/` so the adapter files stay focused on API-specific shape, not generic plumbing.
 
 ### Scoring
 
 Three-layer ranking: `log1p(engagement) * weight * (0.7 + 0.3 * recency) * credibility`
 
-Credibility tiers: VERIFIED (1.8x -- Polymarket, Snapshot, Blockscout, on-chain) > DELIBERATE (1.0x -- HN, GitHub, Reddit, ethresearch, Shodan) > PASSIVE (0.5x -- YouTube, packages, CoinGecko). Per-item bonuses (0.0-0.5) from raw data. Historical source accuracy tracking (0.5-1.5x).
+Credibility tiers: VERIFIED (1.8x -- Polymarket, Snapshot, Blockscout on-chain, Federal Register, ClinicalTrials.gov) > DELIBERATE (1.0x -- HN, GitHub, Reddit, ethresearch, Shodan, arXiv, OpenAlex, Semantic Scholar, PubMed, CourtListener) > PASSIVE (0.5x -- YouTube, packages, CoinGecko). Per-item bonuses (0.0-0.5) from raw data. Historical source accuracy tracking (0.5-1.5x).
 
 ## MCP Server
 
@@ -73,4 +76,4 @@ digest serve
 
 ## API Specs
 
-See [SPECS.md](SPECS.md) for planned adapter expansion (17 new sources across research, medical, legal, and security domains).
+See [SPECS.md](SPECS.md) for adapter implementation status across research, medical, legal, and security domains. Tier 1 (Semantic Scholar, PubMed, Federal Register, Shodan enhancements) and most of Tier 2 (arXiv, OpenAlex, CourtListener, ClinicalTrials.gov) are implemented; Tier 3 (Crossref, openFDA, bioRxiv, WHO DON, CDC MMWR, EUR-Lex, UK Legislation) remains open.

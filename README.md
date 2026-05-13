@@ -37,20 +37,19 @@ Each skill lives in `skills/<name>/` with a `SKILL.md` entry point.
 
 ### Workflow
 
-| Skill                 | What it does                                                            |
-| --------------------- | ----------------------------------------------------------------------- |
-| `tdd`                 | Test-driven development: vertical slices, mutation testing, polyglot    |
-| `code-review`         | PR review: blast radius, security scan, SOLID checks, 40-item checklist |
-| `prd-to-plan`         | PRD -> phased tracer-bullet vertical slices                             |
-| `prd-to-issues`       | PRD -> GitHub issues with HITL/AFK classification                       |
-| `triage-issue`        | Bug investigation -> GitHub issue with TDD fix plan                     |
-| `focused-fix`         | 5-phase bug fix: SCOPE -> TRACE -> DIAGNOSE -> FIX -> VERIFY            |
-| `release`             | Conventional commits, semver bumping, changelog, readiness checks       |
-| `qa`                  | Interactive QA with background explorer, issue filing                   |
-| `design-an-interface` | "Design It Twice" -- parallel sub-agents with divergent constraints     |
-| `ubiquitous-language` | DDD glossary extraction, canonical terms                                |
-| `grill-me`            | Stress-test designs via structured interrogation                        |
-| `playwright`          | Browser automation testing with Playwright                              |
+| Skill                   | What it does                                                            |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `tdd`                   | Test-driven development: vertical slices, mutation testing, polyglot    |
+| `code-review`           | PR review: blast radius, security scan, SOLID checks, 40-item checklist |
+| `prd-to-plan`           | PRD -> phased tracer-bullet vertical slices (and optionally GitHub issues) |
+| `focused-fix`           | 5-phase bug fix: SCOPE -> TRACE -> DIAGNOSE -> FIX -> VERIFY            |
+| `release`               | Conventional commits, semver bumping, changelog, readiness checks       |
+| `qa`                    | Bug triage and issue creation; interactive QA with background explorer  |
+| `design-an-interface`   | "Design It Twice" -- parallel sub-agents with divergent constraints     |
+| `ubiquitous-language`   | DDD glossary extraction, canonical terms                                |
+| `playwright`            | Browser automation testing with Playwright                              |
+| `property-testing`      | Generative/property-based testing (Hypothesis, proptest, StreamData, fast-check) |
+| `refactoring-strategy`  | Strangler fig, large renames, safe restructuring for polyglot codebases |
 
 ### Infrastructure
 
@@ -80,7 +79,7 @@ Each skill lives in `skills/<name>/` with a `SKILL.md` entry point.
 | `codebase-onboarding`  | Auto-generate onboarding docs, audience-aware                          |
 | `rag-architect`        | RAG pipeline design: chunking, embedding, retrieval, evaluation        |
 | `llm-cost-optimizer`   | 7 optimization techniques in priority order                            |
-| `digest`               | Multi-platform activity digest (11 sources + differential mode)        |
+| `digest`               | Multi-platform activity digest (18 sources + differential mode)        |
 | `recall`               | Knowledge base: query past decisions, patterns, gotchas                |
 | `autoresearch`         | Check experiment status, run iterations, view dashboards               |
 | `watchdog`             | Scan repos for stale PRs, failing CI, security advisories              |
@@ -96,7 +95,7 @@ Eight standalone tools, each with a Typer CLI, pydantic models, and a FastMCP se
 
 | Agent          | What it does                                                               | MCP tools |
 | -------------- | -------------------------------------------------------------------------- | --------- |
-| `digest`       | Multi-platform activity digest (11 sources, differential, structured views)| 7         |
+| `digest`       | Multi-platform activity digest (18 sources, differential, structured views)| 7         |
 | `recall`       | Knowledge capture and retrieval (SQLite + FTS5)                            | 8         |
 | `scribe`       | Session insight extractor (writes to recall)                               | 3         |
 | `autoresearch` | Autonomous experiment runner (ML, Noir, Solidity)                          | 3         |
