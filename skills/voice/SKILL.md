@@ -37,18 +37,18 @@ Loads the Chapman voice profile. Apply his patterns where they improve the draft
 ### Blended voices
 
 ```
-/voice chapman+gwern
+/voice pg-startup+chapman
 ```
 
-Loads both profiles. Where they agree (e.g., both favor thinking-out-loud), lean hard into that. Where they conflict (Chapman digresses freely, Gwern is compressed), pick per-paragraph based on what the material needs.
+Loads both profiles. Where they agree (e.g., both favor short pivot sentences after longer ones), lean hard into that. Where they conflict (PG opens with a thesis, Chapman opens mid-thought), pick per-paragraph based on what the material needs.
 
 ### With intensity
 
 ```
-/voice chapman:heavy gwern:light
+/voice pg-startup:heavy chapman:light
 ```
 
-Weight the influence. Heavy means structural and rhythmic borrowing. Light means just a few moves (e.g., borrow Gwern's habit of inline citations but not his paragraph density).
+Weight the influence. Heavy means structural and rhythmic borrowing. Light means just a few moves (e.g., borrow Chapman's habit of sitting with an uncertainty but not his digressive pacing).
 
 ### Review mode
 
@@ -78,9 +78,12 @@ When rewriting with a voice profile loaded:
 
 ## Available voices
 
-| Voice   | File                                   | Best for                                                                                    |
-| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Chapman | [voices/chapman.md](voices/chapman.md) | Essays, blog posts, anything that benefits from thinking-out-loud and productive digression |
+| Voice       | File                                         | Best for                                                                                                            |
+| ----------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Chapman     | [voices/chapman.md](voices/chapman.md)       | Essays, blog posts, anything that benefits from thinking-out-loud and productive digression                         |
+| pg-early    | [voices/pg-early.md](voices/pg-early.md)     | Combative essays defending an unfashionable position; arguments that earn an abstract claim through a physical scene |
+| pg-startup  | [voices/pg-startup.md](voices/pg-startup.md) | Instructional pieces, how-to writing, founder advice, any prose that lands on a portable imperative                  |
+| pg-late     | [voices/pg-late.md](voices/pg-late.md)       | Philosophical / cultural essays, refinement-driven arguments, pieces that show the writer changing their mind        |
 
 ## What You Get
 
@@ -90,7 +93,10 @@ When rewriting with a voice profile loaded:
 
 ## Reading guide
 
-| Task                   | Read                                   |
-| ---------------------- | -------------------------------------- |
-| Voice profile template | [voice-template.md](voice-template.md) |
-| Chapman voice profile  | [voices/chapman.md](voices/chapman.md) |
+| Task                                | Read                                         |
+| ----------------------------------- | -------------------------------------------- |
+| Voice profile template              | [voice-template.md](voice-template.md)       |
+| Chapman voice profile               | [voices/chapman.md](voices/chapman.md)       |
+| Paul Graham early (2001-2004)       | [voices/pg-early.md](voices/pg-early.md)     |
+| Paul Graham startup-era (2005-2015) | [voices/pg-startup.md](voices/pg-startup.md) |
+| Paul Graham late (2016-present)     | [voices/pg-late.md](voices/pg-late.md)       |

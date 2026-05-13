@@ -33,3 +33,7 @@ node_modules/
 
 # Claude
 .claude/settings.local.json
+
+# Corpora (essay text not redistributed for copyright; rebuild via fetch script)
+/corpus/pg-essays/*.txt
+!/corpus/pg-essays/_slugs.txt
