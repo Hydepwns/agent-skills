@@ -33,6 +33,13 @@ SOURCE_TIERS: dict[str, Tier] = {
     "packages": Tier.PASSIVE,  # downloads are CI/automation heavy
     "coingecko": Tier.PASSIVE,  # market cap is momentum, not conviction
     "shodan": Tier.DELIBERATE,  # intentional exposure data, security research
+    "federalregister": Tier.VERIFIED,  # official rulemaking record; comments are deliberate
+    "pubmed": Tier.DELIBERATE,  # peer-reviewed citations from other researchers
+    "semanticscholar": Tier.DELIBERATE,  # citations + influential-citation signal
+    "arxiv": Tier.DELIBERATE,  # preprints, intentional submission; no engagement signal
+    "openalex": Tier.DELIBERATE,  # citations across 470M+ works
+    "courtlistener": Tier.DELIBERATE,  # opinion citations from other courts
+    "clinicaltrials": Tier.VERIFIED,  # registered trials with regulatory oversight
 }
 
 # Base multiplier per tier
@@ -142,5 +149,71 @@ def _per_item_bonus(source: str, raw: dict) -> float:
         if len(vulns) >= 1 or len(tags) >= 3:
             return 0.2
         return 0.0
+
+    if source == "federalregister":
+        page_views = raw.get("page_views", 0)
+        significant = raw.get("significant", False)
+        bonus = 0.0
+        if significant:
+            bonus += 0.3
+        if page_views > 10000:
+            bonus += 0.4
+        elif page_views > 1000:
+            bonus += 0.2
+        return min(bonus, 0.5)
+
+    if source == "pubmed":
+        rcr = raw.get("relative_citation_ratio")
+        is_clinical = raw.get("is_clinical", False)
+        bonus = 0.0
+        if isinstance(rcr, (int, float)):
+            if rcr > 5.0:
+                bonus += 0.4
+            elif rcr > 1.0:
+                bonus += 0.2
+        if is_clinical:
+            bonus += 0.1
+        return min(bonus, 0.5)
+
+    if source == "semanticscholar":
+        influential = raw.get("influentialCitationCount", 0)
+        if influential > 50:
+            return 0.4
+        if influential > 10:
+            return 0.2
+        return 0.0
+
+    if source == "openalex":
+        fwci = raw.get("fwci")
+        if isinstance(fwci, (int, float)):
+            if fwci > 3.0:
+                return 0.4
+            if fwci > 1.0:
+                return 0.2
+        return 0.0
+
+    if source == "courtlistener":
+        cite_count = raw.get("citeCount", 0)
+        court_id = raw.get("court_id", "")
+        bonus = 0.0
+        if cite_count > 100:
+            bonus += 0.4
+        elif cite_count > 20:
+            bonus += 0.2
+        if court_id == "scotus":
+            bonus += 0.3
+        return min(bonus, 0.5)
+
+    if source == "clinicaltrials":
+        phase = raw.get("phase", "NA")
+        enrollment = raw.get("enrollmentCount", 0)
+        bonus = 0.0
+        if phase in ("PHASE3", "PHASE4"):
+            bonus += 0.4
+        elif phase == "PHASE2":
+            bonus += 0.2
+        if enrollment > 1000:
+            bonus += 0.3
+        return min(bonus, 0.5)
 
     return 0.0

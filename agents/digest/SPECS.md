@@ -91,6 +91,10 @@ Query field prefixes: `ti:` (title), `au:` (author), `abs:` (abstract), `cat:` (
 - RSS feed (`http://export.arxiv.org/rss/cs.AI`) only shows daily new submissions, not search results
 - Consider composite: search arXiv, then batch-enrich via S2 `GET /paper/arXiv:{id}` for citations
 - Consider adding `arxiv_categories: list[str]` to `ExpandedQuery` for category-scoped searches
+- ID parsing: use non-greedy regex `r"/abs/(.+?)(?:v\d+)?$"` to handle both modern IDs (`2401.12345v3`) and pre-2007 IDs (`cs.LG/0701234v2`)
+- Title and summary fields contain inline newlines/indentation -- collapse whitespace before storage
+- `arxiv:comment` is optional but useful (often contains venue: "Accepted at NeurIPS 2025")
+- Implemented in `agents/digest/src/digest/adapters/arxiv.py` (2026-05-13)
 
 ---
 
@@ -153,12 +157,17 @@ Body: {"ids": ["arXiv:2401.12345", "DOI:10.1234/..."]}
 
 **Implementation notes:**
 - Default response returns almost nothing -- must explicitly request `fields=`
-- `tldr` field provides AI-generated summary -- use as `Item.summary`
-- `externalIds` contains `ArXiv`, `DOI`, `PubMed`, `SSRN` -- useful for cross-adapter dedup
+- `tldr` field provides AI-generated summary -- use as `Item.summary`. **Only available on `/paper/search`, NOT on `/paper/search/bulk`** (bulk returns 400 "Unrecognized or unsupported fields: [tldr]")
+- `externalIds` contains `ArXiv`, `DOI`, `PubMed`, `SSRN`, `DBLP`, `MAG`, `CorpusId` -- useful for cross-adapter dedup
+- `openAccessPdf` is often `{url: "", status: null, license: null}` for closed-access papers -- treat empty-string url as None
 - Batch endpoint (`POST /paper/batch`) is essential for composite enrichment (avoid 1 RPS per-paper)
-- 1 RPS authenticated limit is strict -- serialize requests
+- **Unauthenticated rate limit is severe in practice**: nominally ~100 req/5min but bursty calls hit 429 within seconds and the cooldown is long (multiple minutes from the same IP). The adapter MUST soft-fail on 429: return [] for the failing term and continue with other terms rather than crashing.
+- 1 RPS authenticated limit is strict but predictable -- set `S2_API_KEY` for any real usage
+- `/paper/search` has no native publication-date filter; client-side filter on `publicationDate` (format `YYYY-MM-DD`)
+- Some papers have `publicationDate: null` but a `year` -- fall back to year midpoint (July 1) for timestamp
 - Covers ~215M papers, gaps in humanities/social sciences
 - Can resolve SSRN papers via `externalIds.SSRN`
+- Implemented in `agents/digest/src/digest/adapters/semanticscholar.py` (2026-05-13)
 
 ---
 
@@ -202,12 +211,17 @@ Filter combos: `cited_by_count:>50`, `type:article`, `open_access.is_oa:true`, `
 
 **Implementation notes:**
 - 470M+ works (broadest coverage of any free API)
-- `fwci` (field-weighted citation impact) > 1.0 means above average for its field
+- `fwci` (field-weighted citation impact) > 1.0 means above average for its field; `null` for too-new papers -- preserve as `None`, do not coerce to 0.0
 - `counts_by_year` shows citation trajectory -- useful for trend detection in differential digests
-- `concepts` field enables automatic topic classification
+- `concepts` field enables automatic topic classification; concept `id` is a URL -- store the trailing segment (e.g. `C2776760102`)
 - Can resolve SSRN papers via DOI or title search (SSRN has no API)
 - XPAC works (190M+ additional records) excluded by default -- add `include_xpac=true` for full coverage
 - Credit system: list/search = 10 credits each, entity lookup = 1 credit
+- **Auth is not strictly required in practice** despite the docs' "Required since Feb 2025" note -- anonymous requests still succeed, just with lower rate limit. Adapter precedence: `OPENALEX_API_KEY` (api_key param) > `OPENALEX_EMAIL` (mailto param, polite pool) > anonymous.
+- DOIs come back as full URLs (`https://doi.org/10.1234/...`); normalize bare DOIs to the URL form for consistency.
+- `id` field is `https://openalex.org/W1234567890`; dedupe key is the trailing `W…` segment.
+- `select=` param is essential -- default response is ~30KB per item; the adapter requests only the 11 fields it uses.
+- Implemented in `agents/digest/src/digest/adapters/openalex.py` (2026-05-13)
 - `select` parameter is critical for performance -- always specify only needed fields
 
 ---
@@ -341,10 +355,14 @@ GET https://icite.od.nih.gov/api/pubs
 - Use esummary (JSON) instead of efetch (XML-only) for metadata -- simpler parsing
 - iCite enrichment is optional but highly valuable -- adds citation_count + relative_citation_ratio
 - iCite accepts batches of PMIDs (comma-separated), no auth needed
+- iCite returns `relative_citation_ratio: null` for too-new papers (no citation field yet) -- preserve as `None`, not `0.0`, so per-item bonus can distinguish "uncited" from "not scored"
+- `sortpubdate` format is `YYYY/MM/DD HH:MM` (with time) or `YYYY/MM/DD` -- accept both
+- DOI is buried in `articleids` list as `{idtype: "doi", value: "..."}` -- not a top-level field
 - `retmax` caps at 10,000 -- use WebEnv/QueryKey for larger result sets
 - MeSH terms enable precise medical topic filtering
 - Consider adding `pubmed_mesh: list[str]` to `ExpandedQuery`
 - 36M+ abstracts indexed
+- Implemented in `agents/digest/src/digest/adapters/pubmed.py` (2026-05-13)
 
 ---
 
@@ -432,10 +450,15 @@ Pagination: opaque `nextPageToken` (not offset-based).
 **Implementation notes:**
 - Response is deeply nested: `studies[].protocolSection.{identificationModule,statusModule,designModule,...}`
 - Extract fields via careful path traversal, not flat dict access
-- `overallStatus` values: RECRUITING, COMPLETED, ACTIVE_NOT_RECRUITING, TERMINATED, WITHDRAWN, SUSPENDED
+- `overallStatus` values: RECRUITING, COMPLETED, ACTIVE_NOT_RECRUITING, TERMINATED, WITHDRAWN, SUSPENDED, NOT_YET_RECRUITING
 - ISO 8601 dates, CommonMark markdown in text fields
 - `totalCount` (with `countTotal=true`) indicates topic popularity
 - Legacy v1 API retired June 2024 -- only v2 works
+- **Use `urllib.request` not `httpx`**: the CT.gov edge WAF performs TLS fingerprinting and returns 403 to httpx (including when mimicking curl's exact headers). stdlib `urllib.request` passes through. This is the only adapter that needs the workaround.
+- A trial can list multiple phases (`["PHASE1", "PHASE2"]`); the highest weight wins for engagement scoring (use a `_top_phase` helper).
+- Dates can arrive as `YYYY-MM-DD`, `YYYY-MM`, or `YYYY` -- accept all three.
+- `enrollmentInfo` may be missing entirely on early-registration trials; default to 0.
+- Implemented in `agents/digest/src/digest/adapters/clinicaltrials.py` (2026-05-13)
 
 ---
 
@@ -621,6 +644,12 @@ Supports Solr syntax in `q`: range queries `citeCount:[10 TO *]`, boolean `term1
 - Fields use camelCase, not snake_case
 - Pagination returns `next`/`previous` URLs
 - Maintenance window: Thursdays 21:00-23:59 PT
+- **Auth is not strictly required** in practice -- anonymous requests still work, just at a lower rate ceiling. Adapter sends `Authorization: Token` header only when `COURTLISTENER_TOKEN` is set.
+- **Top-level `id` field does not exist** in the response despite the SPECS-listed "dedupe key: id" -- the canonical dedupe key is `cluster_id`. Multiple sibling opinions (concurring, dissenting) share one cluster, so deduping by `cluster_id` keeps one entry per case.
+- `judge` is a string, not an array; multi-judge panels are semicolon-separated (e.g. `"Gibbons; Thapar; Larsen"`)
+- `absolute_url` is relative (`/opinion/.../`) -- prepend the site base when building Item URLs
+- `snippet` is `None` for results returned without highlighted matches
+- Implemented in `agents/digest/src/digest/adapters/courtlistener.py` (2026-05-13)
 
 ---
 
@@ -645,30 +674,33 @@ GET /documents.json
   &conditions[publication_date][gte]={since_date}
   &per_page={limit}
   &order=newest
-  &fields[]=title,abstract,document_number,type,agencies,publication_date,comment_count,significant,html_url
+  &fields[]=title,abstract,document_number,type,agencies,publication_date,page_views,significant,comments_close_on,html_url,regulations_dot_gov_url
 ```
 
 Document types: `conditions[type][]=Rule`, `Proposed Rule`, `Notice`, `Presidential Document`.
 
-**Engagement mapping:** `comment_count + (50 if significant else 0)`
+**Engagement mapping:** `page_views.count + (50 if significant else 0)`
 
-**Raw dict fields:** `document_number`, `type`, `comment_count`, `significant`, `agencies`, `abstract`, `comments_close_on`
+**Raw dict fields:** `document_number`, `type`, `page_views`, `significant`, `agencies`, `abstract`, `comments_close_on`, `regulations_dot_gov_url`
 
 **Dedupe key:** `document_number`
 
 **Per-item bonus:**
 - `significant == true` -> 0.3
-- `comment_count > 1000` -> 0.4
-- `comment_count > 100` -> 0.2
+- `page_views > 10000` -> 0.4
+- `page_views > 1000` -> 0.2
 
 **Implementation notes:**
 - No auth, clean JSON, well-documented -- easiest legal API to implement
 - `fields[]` parameter is critical for performance -- always specify only needed fields
-- `significant` flag (EO 12866) identifies economically important rules
+- `significant` flag (EO 12866) identifies economically important rules; usually `null`, occasionally `true`
+- **`comment_count` is NOT a valid field on the list endpoint** -- the API returns 400. The comment count lives on the per-document detail endpoint nested under `dockets[].documents[].comment_count`. To use comment_count as engagement you would need a second API call per document. We use `page_views.count` instead -- noisier but available without an extra round-trip.
+- `page_views` is returned as `{count: <int>, last_updated: <str>}` -- read `.count`
 - `comments_close_on` date indicates active rulemaking (open deadlines = high engagement)
-- `agencies` is an array -- extract first agency name for display
+- `agencies` is an array of objects with `name` and `raw_name` -- extract first agency name for display
 - Max 2,000 results per query -- use date-range windowing for larger pulls
 - Cross-reference to regulations.gov via `regulations_dot_gov_url`
+- Implemented in `agents/digest/src/digest/adapters/federalregister.py` (2026-05-13)
 
 ---
 
@@ -919,6 +951,12 @@ Also: `GET /api/count?query={term}` for totals without results.
 - Add `_search_internetdb(ip)` method as fallback in `fetch()` when `_api_key` is empty
 - Add `facet_summary(query)` method for aggregate exposure stats
 - Consider exploits as separate enrichment step (different base URL, different data shape)
+
+**Implementation status (2026-05-13):**
+- InternetDB fallback: **done**. Keyless `fetch()` routes IP-shaped query terms (parsed via `ipaddress.ip_address`) to `internetdb.shodan.io/{ip}`. CIDR notation and partial IPs are skipped. Non-IP terms return `[]` since InternetDB has no search.
+- Facets endpoint: **done**. Authenticated `fetch()` follows each `/shodan/host/search` with a `/shodan/host/count` call requesting `org:10,country:10,port:10,vuln:10,product:10`. Emits one aggregate `Item` per query term with `raw.kind="facet_summary"`, `engagement=total`, and `raw.facets` containing the normalized facet values.
+- Exploits API: not yet wired -- would require CVE-pattern detection in query terms and a new code path against `exploits.shodan.io/api/search`.
+- See `agents/digest/src/digest/adapters/shodan.py`.
 
 ---
 

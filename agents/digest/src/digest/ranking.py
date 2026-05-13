@@ -28,6 +28,13 @@ PLATFORM_WEIGHTS: dict[str, float] = {
     "packages": 0.3,  # Downloads are massive numbers, scale down heavily
     "coingecko": 0.4,  # Market data, not discussion
     "blockscout": 1.2,  # On-chain activity, real value transfers
+    "federalregister": 1.2,  # Official rulemaking; comment counts are concentrated
+    "pubmed": 2.5,  # Peer-reviewed citations are sparse but high-signal
+    "semanticscholar": 2.5,  # Same: citations across 215M papers, sparse signal
+    "arxiv": 2.0,  # No engagement; recency-only. Composite with S2 for citations.
+    "openalex": 2.0,  # Citations across humanities + sciences; broad but noisier.
+    "courtlistener": 2.0,  # Case law citations are sparse but high-quality
+    "clinicaltrials": 1.5,  # Enrollment + phase carry actual clinical commitment
 }
 
 
